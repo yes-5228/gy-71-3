@@ -54,6 +54,10 @@ def edit_contract(contract_id: int, payload: ContractUpdate, db: Session = Depen
         msg = str(exc)
         if msg.startswith("termination_blocked:"):
             raise HTTPException(status_code=400, detail=msg.split(":", 1)[1])
+        if msg.startswith("expire_blocked:"):
+            raise HTTPException(status_code=400, detail=msg.split(":", 1)[1])
+        if msg.startswith("deposit_status_modify_forbidden:"):
+            raise HTTPException(status_code=400, detail=msg.split(":", 1)[1])
         raise HTTPException(status_code=400, detail="合同更新失败")
     if not contract:
         raise HTTPException(status_code=404, detail="合同不存在")
