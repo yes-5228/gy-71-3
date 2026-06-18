@@ -36,6 +36,7 @@ def init_db() -> None:
                 end_date=today + timedelta(days=18),
                 monthly_rent=6800,
                 deposit=13600,
+                deposit_status="unhandled",
                 status="active",
             ),
             Contract(
@@ -47,6 +48,7 @@ def init_db() -> None:
                 end_date=today + timedelta(days=210),
                 monthly_rent=12800,
                 deposit=25600,
+                deposit_status="unhandled",
                 status="active",
             ),
         ]

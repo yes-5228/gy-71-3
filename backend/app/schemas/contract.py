@@ -24,13 +24,17 @@ class ContractUpdate(BaseModel):
     tenant_contact: str | None = None
     end_date: date | None = None
     status: str | None = None
+    deposit_status: str | None = None
 
 
 class ContractRead(ContractBase):
     id: int
     contract_no: str
     status: str
+    deposit_status: str
     signed_at: datetime
     workstation: WorkstationRead | None = None
+    can_terminate: bool = True
+    terminate_reason: str = ""
 
     model_config = {"from_attributes": True}

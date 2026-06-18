@@ -18,3 +18,15 @@ export function updateContract(id, payload) {
     body: JSON.stringify(payload)
   })
 }
+
+export function terminateContract(id) {
+  return request(`/contracts/${id}/terminate`, {
+    method: 'POST'
+  })
+}
+
+export function refundDeposit(id) {
+  return request(`/contracts/${id}/refund-deposit`, {
+    method: 'POST'
+  })
+}

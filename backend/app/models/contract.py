@@ -18,6 +18,7 @@ class Contract(Base):
     end_date: Mapped[date] = mapped_column(Date, index=True)
     monthly_rent: Mapped[float] = mapped_column(Numeric(10, 2))
     deposit: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
+    deposit_status: Mapped[str] = mapped_column(String(24), default="unhandled", index=True)
     status: Mapped[str] = mapped_column(String(24), default="active", index=True)
     signed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

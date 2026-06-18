@@ -26,6 +26,7 @@
     </form>
 
     <p v-if="error" class="error">{{ error }}</p>
+    <p v-if="success" class="success">{{ success }}</p>
     <div class="table-wrap">
       <table>
         <thead>
@@ -36,7 +37,9 @@
             <th>租期</th>
             <th>月租金</th>
             <th>押金</th>
+            <th>押金状态</th>
             <th>状态</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
@@ -47,7 +50,31 @@
             <td>{{ contract.start_date }} 至 {{ contract.end_date }}</td>
             <td>{{ currency(contract.monthly_rent) }}</td>
             <td>{{ currency(contract.deposit) }}</td>
+            <td><StatusBadge :value="depositStatusLabel(contract.deposit_status)" /></td>
             <td><StatusBadge :value="contract.status" /></td>
+            <td class="action-col">
+              <template v-if="contract.status === 'active'">
+                <button
+                  v-if="contract.deposit > 0 && contract.deposit_status !== 'refunded'"
+                  type="button"
+                  class="small-button"
+                  title="确认退还押金"
+                  @click="requestRefundDeposit(contract)"
+                >
+                  退还押金
+                </button>
+                <button
+                  type="button"
+                  class="small-button danger"
+                  :disabled="!contract.can_terminate"
+                  :title="contract.can_terminate ? '确认终止该合同' : contract.terminate_reason"
+                  @click="requestTerminate(contract)"
+                >
+                  终止合同
+                </button>
+              </template>
+              <span v-else>-</span>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -57,7 +84,7 @@
 
 <script setup>
 import { onMounted, reactive, ref, watch } from 'vue'
-import { createContract, fetchContracts } from '../api/contracts'
+import { createContract, fetchContracts, refundDeposit, terminateContract } from '../api/contracts'
 import { fetchWorkstations } from '../api/workstations'
 import SectionToolbar from '../components/SectionToolbar.vue'
 import StatusBadge from '../components/StatusBadge.vue'
@@ -67,6 +94,7 @@ const contracts = ref([])
 const availableWorkstations = ref([])
 const statusFilter = ref('')
 const error = ref('')
+const success = ref('')
 const form = reactive({
   tenant_name: '',
   tenant_contact: '',
@@ -88,8 +116,21 @@ watch(
   }
 )
 
-async function loadContracts() {
+function depositStatusLabel(status) {
+  const map = {
+    unhandled: '未处理',
+    refunded: '已退还'
+  }
+  return map[status] || status || '已退还'
+}
+
+function clearMessages() {
   error.value = ''
+  success.value = ''
+}
+
+async function loadContracts() {
+  clearMessages()
   try {
     contracts.value = await fetchContracts(statusFilter.value)
   } catch (err) {
@@ -110,7 +151,7 @@ async function load() {
 }
 
 async function submit() {
-  error.value = ''
+  clearMessages()
   try {
     await createContract({ ...form, workstation_id: Number(form.workstation_id) })
     Object.assign(form, {
@@ -122,6 +163,41 @@ async function submit() {
       monthly_rent: 0,
       deposit: 0
     })
+    success.value = '合同签订成功'
+    await load()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+async function requestRefundDeposit(contract) {
+  clearMessages()
+  const confirmed = window.confirm(
+    `确认退还 ${contract.contract_no}（${contract.tenant_name}）的押金 ${currency(contract.deposit)}？`
+  )
+  if (!confirmed) return
+  try {
+    await refundDeposit(contract.id)
+    success.value = `合同 ${contract.contract_no} 的押金已成功退还`
+    await load()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+async function requestTerminate(contract) {
+  clearMessages()
+  if (!contract.can_terminate) {
+    error.value = contract.terminate_reason || '当前合同无法终止'
+    return
+  }
+  const confirmed = window.confirm(
+    `确认终止合同 ${contract.contract_no}（${contract.tenant_name}）？终止后工位将恢复可租赁状态，该操作不可撤销。`
+  )
+  if (!confirmed) return
+  try {
+    await terminateContract(contract.id)
+    success.value = `合同 ${contract.contract_no} 已成功终止`
     await load()
   } catch (err) {
     error.value = err.message
